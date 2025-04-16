@@ -1,0 +1,221 @@
+
+// This is your Prisma schema file for MyGymWebApp
+// Learn more about Prisma: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model (for staff and admin accounts)
+model User {
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  password       String
+  phone          String?
+  role           Role           @default(STAFF)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  gymLocations   GymLocation[]  @relation("LocationStaff")
+  managedLocations GymLocation[] @relation("LocationManager")
+  notifications  Notification[] @relation("UserNotifications")
+  createdMembers Member[]       @relation("CreatedByUser")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+// Gym Location model
+model GymLocation {
+  id           String     @id @default(uuid())
+  name         String
+  address      String
+  city         String
+  state        String
+  pincode      String
+  phone        String
+  email        String?
+  openingTime  String
+  closingTime  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  staff        User[]     @relation("LocationStaff")
+  manager      User       @relation("LocationManager", fields: [managerId], references: [id])
+  managerId    String
+  members      Member[]
+  memberships  Membership[]
+  payments     Payment[]
+  expenses     Expense[]
+}
+
+// Member model
+model Member {
+  id               String           @id @default(uuid())
+  name             String
+  email            String?
+  phone            String
+  address          String?
+  dateOfBirth      DateTime?
+  gender           String?
+  emergencyContact String?
+  joinDate         DateTime         @default(now())
+  createdBy        User             @relation("CreatedByUser", fields: [createdById], references: [id])
+  createdById      String
+  gymLocation      GymLocation      @relation(fields: [gymLocationId], references: [id])
+  gymLocationId    String
+  active           Boolean          @default(true)
+  memberships      Membership[]
+  payments         Payment[]
+  attendance       Attendance[]
+  inquiries        Inquiry[]
+  notifications    Notification[]   @relation("MemberNotifications")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+// Membership model
+model Membership {
+  id             String       @id @default(uuid())
+  name           String
+  description    String?
+  duration       Int          // Duration in days
+  price          Float
+  allowedClasses String[]     // List of classes allowed with this membership
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  gymLocation    GymLocation  @relation(fields: [gymLocationId], references: [id])
+  gymLocationId  String
+  members        Member[]
+  membershipEnrollments MembershipEnrollment[]
+}
+
+// Membership Enrollment (joining table with additional data)
+model MembershipEnrollment {
+  id             String     @id @default(uuid())
+  member         Member     @relation(fields: [memberId], references: [id])
+  memberId       String
+  membership     Membership @relation(fields: [membershipId], references: [id])
+  membershipId   String
+  startDate      DateTime
+  endDate        DateTime
+  status         EnrollmentStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  payments       Payment[]
+
+  @@unique([memberId, membershipId, startDate])
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+// Payment model
+model Payment {
+  id                    String               @id @default(uuid())
+  amount                Float
+  paymentDate           DateTime             @default(now())
+  paymentMethod         PaymentMethod
+  status                PaymentStatus        @default(PENDING)
+  member                Member               @relation(fields: [memberId], references: [id])
+  memberId              String
+  membershipEnrollment  MembershipEnrollment? @relation(fields: [membershipEnrollmentId], references: [id])
+  membershipEnrollmentId String?
+  gymLocation           GymLocation          @relation(fields: [gymLocationId], references: [id])
+  gymLocationId         String
+  reference             String?              // For tracking external payment references
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Expense model
+model Expense {
+  id            String       @id @default(uuid())
+  amount        Float
+  description   String
+  category      String
+  date          DateTime
+  gymLocation   GymLocation  @relation(fields: [gymLocationId], references: [id])
+  gymLocationId String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// Attendance model
+model Attendance {
+  id          String       @id @default(uuid())
+  member      Member       @relation(fields: [memberId], references: [id])
+  memberId    String
+  checkInTime  DateTime
+  checkOutTime DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Inquiry model
+model Inquiry {
+  id          String       @id @default(uuid())
+  subject     String
+  description String
+  status      InquiryStatus @default(OPEN)
+  member      Member       @relation(fields: [memberId], references: [id])
+  memberId    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum InquiryStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+// Notification model
+model Notification {
+  id          String       @id @default(uuid())
+  title       String
+  message     String
+  isRead      Boolean      @default(false)
+  type        NotificationType
+  users       User[]       @relation("UserNotifications")
+  members     Member[]     @relation("MemberNotifications")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum NotificationType {
+  PAYMENT_REMINDER
+  MEMBERSHIP_EXPIRY
+  ANNOUNCEMENT
+  PROMOTION
+  SYSTEM
+}
