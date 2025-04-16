@@ -7,7 +7,8 @@ import {
   CalendarDays,
   UserCheck,
   Filter,
-  FileDown
+  FileDown,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,10 +22,16 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import ManualCheckInForm from '@/components/attendance/ManualCheckInForm';
+import { exportToCSV, exportToPDF, prepareAttendanceExport } from '@/utils/reportExport';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { showCheckInNotification } from '@/utils/notifications';
 
 const Attendance = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showCheckInForm, setShowCheckInForm] = useState(false);
 
   // Sample attendance data
   const attendanceRecords = [
@@ -90,6 +97,21 @@ const Attendance = () => {
   const totalVisitsToday = attendanceRecords.length;
   const averageDuration = "1h 40m";
 
+  const handleExport = (format: 'csv' | 'pdf') => {
+    const data = prepareAttendanceExport(filteredAttendance);
+    
+    if (format === 'csv') {
+      exportToCSV(data, 'attendance-records');
+    } else {
+      exportToPDF(data, 'attendance-records', 'Attendance Records');
+    }
+  };
+  
+  // Demo notification
+  const triggerDemoNotification = () => {
+    showCheckInNotification('New Member', 'MyGym Central');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -99,7 +121,7 @@ const Attendance = () => {
             Track member check-ins and check-outs at your gym facility.
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setShowCheckInForm(true)}>
           <UserCheck className="mr-2 h-4 w-4" />
           Manual Check-in
         </Button>
@@ -160,6 +182,16 @@ const Attendance = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-9 w-9"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -190,6 +222,12 @@ const Attendance = () => {
               <Filter className="mr-2 h-4 w-4" />
               Apply Filters
             </Button>
+            
+            <div className="pt-4 border-t mt-4">
+              <Button className="w-full" variant="outline" onClick={triggerDemoNotification}>
+                Test Notification
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -199,10 +237,22 @@ const Attendance = () => {
               <CalendarClock className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-lg font-medium">Today's Attendance</h3>
             </div>
-            <Button variant="outline" size="sm">
-              <FileDown className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <Card>
@@ -252,6 +302,21 @@ const Attendance = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog open={showCheckInForm} onOpenChange={setShowCheckInForm}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Manual Check-in</DialogTitle>
+            <DialogDescription>
+              Record a member's check-in or check-out.
+            </DialogDescription>
+          </DialogHeader>
+          <ManualCheckInForm 
+            onSuccess={() => setShowCheckInForm(false)}
+            onCancel={() => setShowCheckInForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

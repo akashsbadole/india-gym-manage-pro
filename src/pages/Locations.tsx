@@ -9,15 +9,22 @@ import {
   Clock, 
   PlusCircle,
   Edit,
-  Trash
+  Trash,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import AddLocationForm from '@/components/locations/AddLocationForm';
+import { toast } from 'sonner';
 
 const Locations = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddLocationForm, setShowAddLocationForm] = useState(false);
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
 
   // Sample location data
   const locations = [
@@ -89,6 +96,21 @@ const Locations = () => {
     location.state.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const locationToDelete = locations.find(loc => loc.id === deleteLocationId);
+
+  const handleDeleteLocation = () => {
+    // In a real app, this would make an API call to delete the location
+    console.log('Deleting location:', deleteLocationId);
+    
+    toast.success('Location deleted successfully', {
+      description: `${locationToDelete?.name} has been removed from your gym locations.`,
+    });
+    
+    setDeleteLocationId(null);
+  };
+
+  const states = [...new Set(locations.map(loc => loc.state))];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -98,7 +120,7 @@ const Locations = () => {
             Manage all your gym branches from one place.
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setShowAddLocationForm(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add New Location
         </Button>
@@ -113,20 +135,31 @@ const Locations = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-9 w-9"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 overflow-x-auto pb-2">
           <Button variant="outline" size="sm">
             All Locations
           </Button>
-          <Button variant="outline" size="sm">
-            Maharashtra
-          </Button>
-          <Button variant="outline" size="sm">
-            Karnataka
-          </Button>
-          <Button variant="outline" size="sm">
-            Delhi
-          </Button>
+          {states.map(state => (
+            <Button 
+              key={state} 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSearchQuery(state)}
+            >
+              {state}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -139,7 +172,7 @@ const Locations = () => {
                   <CardTitle className="flex items-center space-x-2">
                     <span>{location.name}</span>
                     {location.isMainBranch && (
-                      <Badge variant="success">Main Branch</Badge>
+                      <Badge variant="outline" className="bg-green-100 text-green-800">Main Branch</Badge>
                     )}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -150,7 +183,12 @@ const Locations = () => {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => setDeleteLocationId(location.id)}
+                  >
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>
@@ -213,6 +251,56 @@ const Locations = () => {
           <p className="text-muted-foreground">Try adjusting your search criteria.</p>
         </div>
       )}
+
+      <Dialog open={showAddLocationForm} onOpenChange={setShowAddLocationForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Location</DialogTitle>
+            <DialogDescription>
+              Enter the details for your new gym location.
+            </DialogDescription>
+          </DialogHeader>
+          <AddLocationForm 
+            onSuccess={() => setShowAddLocationForm(false)}
+            onCancel={() => setShowAddLocationForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteLocationId} onOpenChange={(open) => !open && setDeleteLocationId(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Location</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this location? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {locationToDelete && (
+            <Alert variant="destructive">
+              <AlertTitle>Warning</AlertTitle>
+              <AlertDescription>
+                Deleting "{locationToDelete.name}" will remove all associated data, including {locationToDelete.memberCount} member records and {locationToDelete.staffCount} staff associations.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteLocationId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteLocation}
+            >
+              Delete Location
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -6,7 +6,8 @@ import {
   Search, 
   Filter, 
   FileDown,
-  SlidersHorizontal
+  SlidersHorizontal,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +21,14 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import NewPaymentForm from '@/components/payments/NewPaymentForm';
+import { exportToCSV, exportToPDF, preparePaymentExport } from '@/utils/reportExport';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const Payments = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNewPaymentForm, setShowNewPaymentForm] = useState(false);
 
   // Sample payment data
   const payments = [
@@ -102,6 +108,16 @@ const Payments = () => {
     payment.memberId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleExport = (format: 'csv' | 'pdf') => {
+    const data = preparePaymentExport(filteredPayments);
+    
+    if (format === 'csv') {
+      exportToCSV(data, 'payment-records');
+    } else {
+      exportToPDF(data, 'payment-records', 'Payment Records');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -111,7 +127,7 @@ const Payments = () => {
             Manage payment transactions, view history, and process new payments.
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setShowNewPaymentForm(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           New Payment
         </Button>
@@ -134,6 +150,16 @@ const Payments = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-9 w-9"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -187,10 +213,22 @@ const Payments = () => {
               <CreditCard className="h-5 w-5 text-muted-foreground" />
               <h3 className="text-lg font-medium">Payment Transactions</h3>
             </div>
-            <Button variant="outline" size="sm">
-              <FileDown className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <Card>
@@ -234,6 +272,21 @@ const Payments = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog open={showNewPaymentForm} onOpenChange={setShowNewPaymentForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Process New Payment</DialogTitle>
+            <DialogDescription>
+              Enter payment details to record a new transaction.
+            </DialogDescription>
+          </DialogHeader>
+          <NewPaymentForm 
+            onSuccess={() => setShowNewPaymentForm(false)}
+            onCancel={() => setShowNewPaymentForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

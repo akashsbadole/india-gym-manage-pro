@@ -11,16 +11,21 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import CreateTicketForm from '@/components/support/CreateTicketForm';
+import { toast } from 'sonner';
 
 const Support = () => {
   const [activeTab, setActiveTab] = useState('help');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
 
   // Sample FAQ data
   const faqs = [
@@ -107,7 +112,7 @@ const Support = () => {
       case 'IN_PROGRESS':
         return <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>;
       case 'RESOLVED':
-        return <Badge variant="success">Resolved</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Resolved</Badge>;
       case 'CLOSED':
         return <Badge variant="outline">Closed</Badge>;
       default:
@@ -127,6 +132,14 @@ const Support = () => {
     });
   };
 
+  const submitContactForm = (e) => {
+    e.preventDefault();
+    toast.success('Message sent successfully!', {
+      description: 'Our support team will get back to you within 24 hours.',
+    });
+    // Reset form (in a real app)
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
@@ -136,7 +149,7 @@ const Support = () => {
             Get help with using MyGymWebApp and manage support tickets.
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setShowCreateTicketForm(true)}>
           <MessageSquare className="mr-2 h-4 w-4" />
           Create Support Ticket
         </Button>
@@ -179,6 +192,16 @@ const Support = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-0 h-9 w-9"
+            onClick={() => setSearchQuery('')}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {activeTab === 'help' && (
@@ -331,7 +354,7 @@ const Support = () => {
               <p className="text-muted-foreground">
                 You don't have any support tickets matching your search.
               </p>
-              <Button className="mt-4">Create a New Ticket</Button>
+              <Button className="mt-4" onClick={() => setShowCreateTicketForm(true)}>Create a New Ticket</Button>
             </div>
           )}
         </div>
@@ -347,29 +370,30 @@ const Support = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={submitContactForm}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Your Name</label>
-                    <Input placeholder="Enter your name" />
+                    <Input placeholder="Enter your name" required />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Email Address</label>
-                    <Input type="email" placeholder="Enter your email" />
+                    <Input type="email" placeholder="Enter your email" required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Subject</label>
-                  <Input placeholder="Enter message subject" />
+                  <Input placeholder="Enter message subject" required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Message</label>
                   <textarea 
                     className="w-full h-32 px-3 py-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="Describe your issue or question"
+                    required
                   ></textarea>
                 </div>
-                <Button className="w-full md:w-auto">
+                <Button type="submit" className="w-full md:w-auto">
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Send Message
                 </Button>
@@ -424,6 +448,21 @@ const Support = () => {
           </Card>
         </div>
       )}
+
+      <Dialog open={showCreateTicketForm} onOpenChange={setShowCreateTicketForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create Support Ticket</DialogTitle>
+            <DialogDescription>
+              Submit a ticket to our support team for assistance.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateTicketForm 
+            onSuccess={() => setShowCreateTicketForm(false)}
+            onCancel={() => setShowCreateTicketForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -25,6 +25,7 @@ model User {
   managedLocations GymLocation[] @relation("LocationManager")
   notifications  Notification[] @relation("UserNotifications")
   createdMembers Member[]       @relation("CreatedByUser")
+  supportTickets SupportTicket[] @relation("AssignedTo")
 }
 
 enum Role {
@@ -79,6 +80,7 @@ model Member {
   notifications    Notification[]   @relation("MemberNotifications")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  supportTickets   SupportTicket[]  @relation("RelatedMember")
 }
 
 // Membership model
@@ -197,6 +199,34 @@ enum InquiryStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+// Support Ticket model
+model SupportTicket {
+  id          String               @id @default(uuid())
+  subject     String
+  description String
+  status      SupportTicketStatus  @default(OPEN)
+  priority    SupportTicketPriority @default(MEDIUM)
+  member      Member?              @relation("RelatedMember", fields: [memberId], references: [id])
+  memberId    String?
+  assignedTo  User?                @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 // Notification model
