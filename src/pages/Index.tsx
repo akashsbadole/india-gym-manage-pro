@@ -11,22 +11,22 @@ import Locations from '@/pages/Locations';
 import Notifications from '@/pages/Notifications';
 import Support from '@/pages/Support';
 import Settings from '@/pages/Settings';
+import NotFound from '@/pages/NotFound';
 
 const Index = () => {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="members" element={<Members />} />
-        <Route path="payments" element={<Payments />} />
-        <Route path="attendance" element={<Attendance />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="locations" element={<Locations />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="support" element={<Support />} />
-        <Route path="settings" element={<Settings />} />
-        {/* Add more routes here as we implement additional pages */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/members" element={<Members />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/attendance" element={<Attendance />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/locations" element={<Locations />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/support" element={<Support />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

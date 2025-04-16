@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -36,7 +35,7 @@ interface AddMemberFormProps {
   onSuccess: () => void;
 }
 
-// Form validation schema
+// Form validation schema aligned with Prisma Member model
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
@@ -69,7 +68,7 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log('Form submitted:', values);
-    // In a real app, this would make an API call to create the member
+    // This would make an API call to create the member in a real app
     // For demo purposes, we'll just simulate success
     setTimeout(() => {
       onSuccess();
