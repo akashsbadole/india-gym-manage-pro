@@ -145,7 +145,7 @@ export default function CreateTicketForm({ onSuccess, onCancel }: CreateTicketFo
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {members.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name} ({member.id})
