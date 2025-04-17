@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   HelpCircle, 
@@ -20,7 +19,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import CreateTicketForm from '@/components/support/CreateTicketForm';
-import { toast } from 'sonner';
+import { showNotification } from '@/utils/notifications';
 
 const Support = () => {
   const [activeTab, setActiveTab] = useState('help');
@@ -134,7 +133,7 @@ const Support = () => {
 
   const submitContactForm = (e) => {
     e.preventDefault();
-    toast.success('Message sent successfully!', {
+    showNotification('Message sent successfully!', {
       description: 'Our support team will get back to you within 24 hours.',
     });
     // Reset form (in a real app)

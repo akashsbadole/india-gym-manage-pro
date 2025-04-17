@@ -3,7 +3,6 @@ import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { toast } from 'sonner';
 import { 
   Form,
   FormControl,
@@ -19,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
+import { showCheckInNotification } from '@/utils/notifications';
 
 // Form props interface
 interface ManualCheckInFormProps {
@@ -60,17 +60,19 @@ export default function ManualCheckInForm({ onSuccess, onCancel }: ManualCheckIn
     console.log('Attendance submitted:', values);
     // In a real app, this would make an API call to record attendance
     
-    const memberName = members.find(m => m.id === values.memberId)?.name;
+    const memberName = members.find(m => m.id === values.memberId)?.name || 'Member';
     
-    // Show success notification
+    // Show success notification using our utility
     if (values.checkingOut) {
-      toast.success('Member checked out successfully!', {
-        description: `${memberName} checked out at ${format(values.checkOutTime || new Date(), 'h:mm a')}`,
-      });
+      showNotification(
+        'Member checked out successfully!',
+        'success',
+        {
+          description: `${memberName} checked out at ${format(values.checkOutTime || new Date(), 'h:mm a')}`,
+        }
+      );
     } else {
-      toast.success('Member checked in successfully!', {
-        description: `${memberName} checked in at ${format(values.checkInTime, 'h:mm a')}`,
-      });
+      showCheckInNotification(memberName, 'Main Gym');
     }
     
     onSuccess();

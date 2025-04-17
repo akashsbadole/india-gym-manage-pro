@@ -3,7 +3,6 @@ import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { toast } from 'sonner';
 import { 
   Form,
   FormControl,
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { showNotification } from '@/utils/notifications';
 
 // Form validation schema
 const formSchema = z.object({
@@ -72,10 +72,14 @@ export default function ProfileSettingsForm() {
     console.log('Profile settings submitted:', values);
     // In a real app, this would make an API call to update the user profile
     
-    // Show success notification
-    toast.success('Profile updated successfully!', {
-      description: 'Your profile information has been updated.',
-    });
+    // Show success notification using our utility
+    showNotification(
+      'Profile updated successfully!', 
+      'success',
+      {
+        description: 'Your profile information has been updated.',
+      }
+    );
   };
 
   return (

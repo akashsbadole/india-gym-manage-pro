@@ -3,7 +3,6 @@ import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { toast } from 'sonner';
 import { 
   Form,
   FormControl,
@@ -20,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import { showNotification } from '@/utils/notifications';
 
 // Form props interface
 interface NewPaymentFormProps {
@@ -63,10 +63,16 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
     console.log('Payment submitted:', values);
     // In a real app, this would make an API call to create the payment
     
-    // Show success notification
-    toast.success('Payment processed successfully!', {
-      description: `₹${values.amount} payment from ${members.find(m => m.id === values.memberId)?.name}`,
-    });
+    const memberName = members.find(m => m.id === values.memberId)?.name || 'Member';
+    
+    // Show success notification using our utility
+    showNotification(
+      'Payment processed successfully!', 
+      'success',
+      {
+        description: `₹${values.amount} payment from ${memberName}`,
+      }
+    );
     
     onSuccess();
   };

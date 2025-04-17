@@ -1,5 +1,5 @@
 
-import { toast, Toaster, Toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
 

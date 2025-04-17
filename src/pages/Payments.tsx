@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   CreditCard, 
@@ -25,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import NewPaymentForm from '@/components/payments/NewPaymentForm';
 import { exportToCSV, exportToPDF, preparePaymentExport } from '@/utils/reportExport';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 const Payments = () => {
   const [searchQuery, setSearchQuery] = useState('');

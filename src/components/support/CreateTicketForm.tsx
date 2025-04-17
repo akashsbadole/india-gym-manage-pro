@@ -3,7 +3,6 @@ import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { toast } from 'sonner';
 import { 
   Form,
   FormControl,
@@ -16,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, AlertCircle } from 'lucide-react';
+import { showNotification } from '@/utils/notifications';
 
 // Form props interface
 interface CreateTicketFormProps {
@@ -55,10 +55,14 @@ export default function CreateTicketForm({ onSuccess, onCancel }: CreateTicketFo
     console.log('Support ticket submitted:', values);
     // In a real app, this would make an API call to create the ticket
     
-    // Show success notification
-    toast.success('Support ticket created!', {
-      description: `Ticket #TIC${Math.floor(1000 + Math.random() * 9000)} has been created.`,
-    });
+    // Show success notification using our utility
+    showNotification(
+      'Support ticket created!', 
+      'success',
+      {
+        description: `Ticket #TIC${Math.floor(1000 + Math.random() * 9000)} has been created.`,
+      }
+    );
     
     onSuccess();
   };
