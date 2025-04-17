@@ -26,7 +26,6 @@ const Support = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
 
-  // Sample FAQ data
   const faqs = [
     {
       id: '1',
@@ -60,7 +59,6 @@ const Support = () => {
     },
   ];
 
-  // Sample ticket data
   const tickets = [
     {
       id: 'TIC001',
@@ -133,9 +131,13 @@ const Support = () => {
 
   const submitContactForm = (e) => {
     e.preventDefault();
-    showNotification('Message sent successfully!', {
-      description: 'Our support team will get back to you within 24 hours.',
-    });
+    showNotification(
+      'Message sent successfully!',
+      'success',
+      {
+        description: 'Our support team will get back to you within 24 hours.',
+      }
+    );
     // Reset form (in a real app)
   };
 

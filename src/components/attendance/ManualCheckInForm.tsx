@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -18,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
-import { showCheckInNotification } from '@/utils/notifications';
+import { showNotification, showCheckInNotification } from '@/utils/notifications';
 
 // Form props interface
 interface ManualCheckInFormProps {
