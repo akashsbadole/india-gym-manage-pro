@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { showNotification, showCheckInNotification } from '@/utils/notifications';
+// import mockPrisma from '@/lib/browser-prisma'; // Uncomment if needed for future Prisma operations
 
 // Form props interface
 interface ManualCheckInFormProps {

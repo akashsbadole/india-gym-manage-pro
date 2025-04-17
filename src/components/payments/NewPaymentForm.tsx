@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -20,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { showNotification } from '@/utils/notifications';
-import prisma from '@/lib/prisma';
+import mockPrisma from '@/lib/browser-prisma';
 
 // Form props interface
 interface NewPaymentFormProps {
@@ -65,7 +64,7 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
     
     try {
       // Create payment in database
-      const payment = await prisma.payment.create({
+      const payment = await mockPrisma.payment.create({
         data: {
           amount: values.amount,
           paymentDate: values.paymentDate,

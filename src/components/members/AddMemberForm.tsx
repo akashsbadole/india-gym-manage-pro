@@ -30,7 +30,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import prisma from '@/lib/prisma';
+import mockPrisma from '@/lib/browser-prisma';
 import { showNotification } from '@/utils/notifications';
 
 interface AddMemberFormProps {
@@ -77,7 +77,7 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
       const dateOfBirth = values.dateOfBirth ? new Date(values.dateOfBirth) : undefined;
       
       // Create user in database
-      const member = await prisma.member.create({
+      const member = await mockPrisma.member.create({
         data: {
           name: values.name,
           email: values.email || null,

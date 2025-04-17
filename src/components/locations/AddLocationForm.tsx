@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { showNotification } from '@/utils/notifications';
-import prisma from '@/lib/prisma';
+import mockPrisma from '@/lib/browser-prisma';
 
 // Form props interface
 interface AddLocationFormProps {
@@ -77,7 +76,7 @@ export default function AddLocationForm({ onSuccess, onCancel }: AddLocationForm
     
     try {
       // Create the location in database
-      const location = await prisma.gymLocation.create({
+      const location = await mockPrisma.gymLocation.create({
         data: {
           name: values.name,
           address: values.address,

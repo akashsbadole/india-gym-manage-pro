@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, AlertCircle } from 'lucide-react';
 import { showNotification } from '@/utils/notifications';
-import prisma from '@/lib/prisma';
+import mockPrisma from '@/lib/browser-prisma';
 
 // Form props interface
 interface CreateTicketFormProps {
@@ -64,7 +63,7 @@ export default function CreateTicketForm({ onSuccess, onCancel }: CreateTicketFo
       };
       
       // Create the support ticket in database
-      const ticket = await prisma.supportTicket.create({
+      const ticket = await mockPrisma.supportTicket.create({
         data: {
           subject: values.subject,
           description: values.description,
@@ -79,7 +78,7 @@ export default function CreateTicketForm({ onSuccess, onCancel }: CreateTicketFo
         'Support ticket created!', 
         'success',
         {
-          description: `Ticket #${ticket.id.substring(0, 8)} has been created.`,
+          description: `Ticket #${typeof ticket.id === 'string' ? ticket.id.substring(0, 8) : 'MOCK'} has been created.`,
         }
       );
       
