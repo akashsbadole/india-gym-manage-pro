@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { showNotification } from '@/utils/notifications';
+import prisma from '@/lib/prisma';
 
 // Form props interface
 interface NewPaymentFormProps {
@@ -59,22 +60,52 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log('Payment submitted:', values);
-    // In a real app, this would make an API call to create the payment
     
-    const memberName = members.find(m => m.id === values.memberId)?.name || 'Member';
-    
-    // Show success notification using our utility
-    showNotification(
-      'Payment processed successfully!', 
-      'success',
-      {
-        description: `₹${values.amount} payment from ${memberName}`,
-      }
-    );
-    
-    onSuccess();
+    try {
+      // Create payment in database
+      const payment = await prisma.payment.create({
+        data: {
+          amount: values.amount,
+          paymentDate: values.paymentDate,
+          paymentMethod: values.paymentMethod,
+          status: 'COMPLETED',
+          reference: values.reference || null,
+          notes: values.notes || null,
+          member: {
+            connect: { id: values.memberId }
+          },
+          gymLocation: {
+            // For simplicity, we're connecting to the first gym location
+            // In a real app, this would be based on context or selection
+            connect: { id: 'loc1' }
+          }
+        },
+      });
+      
+      const memberName = members.find(m => m.id === values.memberId)?.name || 'Member';
+      
+      // Show success notification
+      showNotification(
+        'Payment processed successfully!', 
+        'success',
+        {
+          description: `₹${values.amount} payment from ${memberName}`,
+        }
+      );
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      showNotification(
+        'Failed to process payment', 
+        'error',
+        {
+          description: 'There was an error saving the payment. Please try again.',
+        }
+      );
+    }
   };
 
   return (

@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { showNotification } from '@/utils/notifications';
+import prisma from '@/lib/prisma';
 
 // Form props interface
 interface AddLocationFormProps {
@@ -71,20 +72,48 @@ export default function AddLocationForm({ onSuccess, onCancel }: AddLocationForm
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log('Location submitted:', values);
-    // In a real app, this would make an API call to create the location
     
-    // Show success notification using our utility
-    showNotification(
-      'Location added successfully!', 
-      'success',
-      {
-        description: `${values.name} in ${values.city}, ${values.state} has been added.`,
-      }
-    );
-    
-    onSuccess();
+    try {
+      // Create the location in database
+      const location = await prisma.gymLocation.create({
+        data: {
+          name: values.name,
+          address: values.address,
+          city: values.city,
+          state: values.state,
+          pincode: values.pincode,
+          phone: values.phone,
+          email: values.email || null,
+          openingTime: values.openingTime,
+          closingTime: values.closingTime,
+          manager: {
+            connect: { id: values.managerId }
+          }
+        },
+      });
+      
+      // Show success notification
+      showNotification(
+        'Location added successfully!', 
+        'success',
+        {
+          description: `${values.name} in ${values.city}, ${values.state} has been added.`,
+        }
+      );
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error creating location:', error);
+      showNotification(
+        'Failed to add location', 
+        'error',
+        {
+          description: 'There was an error saving the location. Please try again.',
+        }
+      );
+    }
   };
 
   return (

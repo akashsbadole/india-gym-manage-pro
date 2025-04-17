@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, AlertCircle } from 'lucide-react';
 import { showNotification } from '@/utils/notifications';
+import prisma from '@/lib/prisma';
 
 // Form props interface
 interface CreateTicketFormProps {
@@ -51,20 +52,48 @@ export default function CreateTicketForm({ onSuccess, onCancel }: CreateTicketFo
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log('Support ticket submitted:', values);
-    // In a real app, this would make an API call to create the ticket
     
-    // Show success notification using our utility
-    showNotification(
-      'Support ticket created!', 
-      'success',
-      {
-        description: `Ticket #TIC${Math.floor(1000 + Math.random() * 9000)} has been created.`,
-      }
-    );
-    
-    onSuccess();
+    try {
+      // Convert priority to the correct enum value for Prisma
+      const priorityMap: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = {
+        'Low': 'LOW',
+        'Medium': 'MEDIUM',
+        'High': 'HIGH',
+      };
+      
+      // Create the support ticket in database
+      const ticket = await prisma.supportTicket.create({
+        data: {
+          subject: values.subject,
+          description: values.description,
+          priority: priorityMap[values.priority],
+          memberId: values.memberId === 'none' ? null : values.memberId,
+          status: 'OPEN',
+        },
+      });
+      
+      // Show success notification
+      showNotification(
+        'Support ticket created!', 
+        'success',
+        {
+          description: `Ticket #${ticket.id.substring(0, 8)} has been created.`,
+        }
+      );
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      showNotification(
+        'Failed to create ticket', 
+        'error',
+        {
+          description: 'There was an error saving your support ticket. Please try again.',
+        }
+      );
+    }
   };
 
   return (

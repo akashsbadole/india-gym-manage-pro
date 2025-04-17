@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,8 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import prisma from '@/lib/prisma';
+import { showNotification } from '@/utils/notifications';
 
 interface AddMemberFormProps {
   onClose: () => void;
@@ -66,13 +69,56 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log('Form submitted:', values);
-    // This would make an API call to create the member in a real app
-    // For demo purposes, we'll just simulate success
-    setTimeout(() => {
+    
+    try {
+      // Parse the date of birth properly
+      const dateOfBirth = values.dateOfBirth ? new Date(values.dateOfBirth) : undefined;
+      
+      // Create user in database
+      const member = await prisma.member.create({
+        data: {
+          name: values.name,
+          email: values.email || null,
+          phone: values.phone,
+          address: values.address || null,
+          dateOfBirth: dateOfBirth,
+          gender: values.gender || null,
+          emergencyContact: values.emergencyContact || null,
+          active: values.active,
+          gymLocation: {
+            connect: { id: values.gymLocationId }
+          },
+          createdBy: {
+            // Assuming a default user for now, in a real app this would be the logged-in user
+            connect: { id: 'USR001' }
+          },
+          memberships: {
+            connect: { id: values.membershipId }
+          }
+        },
+      });
+      
+      showNotification(
+        'Member added successfully!',
+        'success',
+        {
+          description: `${values.name} has been added to the system.`
+        }
+      );
+      
       onSuccess();
-    }, 500);
+    } catch (error) {
+      console.error('Error creating member:', error);
+      showNotification(
+        'Failed to add member',
+        'error',
+        {
+          description: 'There was an error saving the member data. Please try again.'
+        }
+      );
+    }
   };
 
   return (
