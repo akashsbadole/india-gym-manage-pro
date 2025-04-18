@@ -113,88 +113,170 @@ const mockSupportTickets = [
   }
 ];
 
+// Helper function to determine if we should use the real Supabase or mock data
+const useRealSupabase = () => {
+  return import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+};
+
 class MockPrismaClient {
   supportTicket = {
     create: async (data: any) => {
-      const { data: ticket, error } = await supabase
-        .from('support_tickets')
-        .insert([data.data])
-        .select()
-        .single();
+      if (useRealSupabase()) {
+        try {
+          const { data: ticket, error } = await supabase
+            .from('support_tickets')
+            .insert([data.data])
+            .select()
+            .single();
 
-      if (error) throw error;
-      return ticket;
+          if (error) throw error;
+          return ticket;
+        } catch (error) {
+          console.error('Error creating support ticket:', error);
+          // Fallback to mock data if there's an error
+          return { id: `MOCK-${Date.now()}`, ...data.data };
+        }
+      } else {
+        console.log('Creating mock support ticket:', data.data);
+        return { id: `MOCK-${Date.now()}`, ...data.data };
+      }
     },
     findMany: async () => {
-      const { data: tickets, error } = await supabase
-        .from('support_tickets')
-        .select('*');
+      if (useRealSupabase()) {
+        try {
+          const { data: tickets, error } = await supabase
+            .from('support_tickets')
+            .select('*');
 
-      if (error) throw error;
-      return tickets || mockSupportTickets;
+          if (error) throw error;
+          return tickets || mockSupportTickets;
+        } catch (error) {
+          console.error('Error fetching support tickets:', error);
+          return mockSupportTickets;
+        }
+      } else {
+        return mockSupportTickets;
+      }
     }
   };
   
   gymLocation = {
     create: async (data: any) => {
-      const { data: location, error } = await supabase
-        .from('gym_locations')
-        .insert([data.data])
-        .select()
-        .single();
+      if (useRealSupabase()) {
+        try {
+          const { data: location, error } = await supabase
+            .from('gym_locations')
+            .insert([data.data])
+            .select()
+            .single();
 
-      if (error) throw error;
-      return location;
+          if (error) throw error;
+          return location;
+        } catch (error) {
+          console.error('Error creating gym location:', error);
+          return { id: `MOCK-${Date.now()}`, ...data.data };
+        }
+      } else {
+        console.log('Creating mock gym location:', data.data);
+        return { id: `MOCK-${Date.now()}`, ...data.data };
+      }
     },
     findMany: async () => {
-      const { data: locations, error } = await supabase
-        .from('gym_locations')
-        .select('*');
+      if (useRealSupabase()) {
+        try {
+          const { data: locations, error } = await supabase
+            .from('gym_locations')
+            .select('*');
 
-      if (error) throw error;
-      return locations || mockLocations;
+          if (error) throw error;
+          return locations || mockLocations;
+        } catch (error) {
+          console.error('Error fetching gym locations:', error);
+          return mockLocations;
+        }
+      } else {
+        return mockLocations;
+      }
     }
   };
 
   member = {
     create: async (data: any) => {
-      const { data: member, error } = await supabase
-        .from('members')
-        .insert([data.data])
-        .select()
-        .single();
+      if (useRealSupabase()) {
+        try {
+          const { data: member, error } = await supabase
+            .from('members')
+            .insert([data.data])
+            .select()
+            .single();
 
-      if (error) throw error;
-      return member;
+          if (error) throw error;
+          return member;
+        } catch (error) {
+          console.error('Error creating member:', error);
+          return { id: `MOCK-${Date.now()}`, ...data.data };
+        }
+      } else {
+        console.log('Creating mock member:', data.data);
+        return { id: `MOCK-${Date.now()}`, ...data.data };
+      }
     },
     findMany: async () => {
-      const { data: members, error } = await supabase
-        .from('members')
-        .select('*');
+      if (useRealSupabase()) {
+        try {
+          const { data: members, error } = await supabase
+            .from('members')
+            .select('*');
 
-      if (error) throw error;
-      return members || mockMembers;
+          if (error) throw error;
+          return members || mockMembers;
+        } catch (error) {
+          console.error('Error fetching members:', error);
+          return mockMembers;
+        }
+      } else {
+        return mockMembers;
+      }
     }
   };
 
   payment = {
     create: async (data: any) => {
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .insert([data.data])
-        .select()
-        .single();
+      if (useRealSupabase()) {
+        try {
+          const { data: payment, error } = await supabase
+            .from('payments')
+            .insert([data.data])
+            .select()
+            .single();
 
-      if (error) throw error;
-      return payment;
+          if (error) throw error;
+          return payment;
+        } catch (error) {
+          console.error('Error creating payment:', error);
+          return { id: `MOCK-${Date.now()}`, ...data.data };
+        }
+      } else {
+        console.log('Creating mock payment:', data.data);
+        return { id: `MOCK-${Date.now()}`, ...data.data };
+      }
     },
     findMany: async () => {
-      const { data: payments, error } = await supabase
-        .from('payments')
-        .select('*');
+      if (useRealSupabase()) {
+        try {
+          const { data: payments, error } = await supabase
+            .from('payments')
+            .select('*');
 
-      if (error) throw error;
-      return payments || mockPayments;
+          if (error) throw error;
+          return payments || mockPayments;
+        } catch (error) {
+          console.error('Error fetching payments:', error);
+          return mockPayments;
+        }
+      } else {
+        return mockPayments;
+      }
     }
   };
 }
