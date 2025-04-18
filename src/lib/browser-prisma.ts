@@ -1,6 +1,7 @@
-
 // This is a mock implementation of Prisma for browser environments
 // In a real production app, you would use API routes instead of direct DB access from the browser
+
+import { supabase } from '@/lib/supabase';
 
 const mockMembers = [
   {
@@ -115,45 +116,88 @@ const mockSupportTickets = [
 class MockPrismaClient {
   supportTicket = {
     create: async (data: any) => {
-      console.log('Creating support ticket with data:', data);
-      return { id: `MOCK-${Date.now()}`, ...data.data };
+      const { data: ticket, error } = await supabase
+        .from('support_tickets')
+        .insert([data.data])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return ticket;
     },
     findMany: async () => {
-      return mockSupportTickets;
+      const { data: tickets, error } = await supabase
+        .from('support_tickets')
+        .select('*');
+
+      if (error) throw error;
+      return tickets || mockSupportTickets;
     }
   };
   
   gymLocation = {
     create: async (data: any) => {
-      console.log('Creating gym location with data:', data);
-      return { id: `MOCK-${Date.now()}`, ...data.data };
+      const { data: location, error } = await supabase
+        .from('gym_locations')
+        .insert([data.data])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return location;
     },
     findMany: async () => {
-      return mockLocations;
+      const { data: locations, error } = await supabase
+        .from('gym_locations')
+        .select('*');
+
+      if (error) throw error;
+      return locations || mockLocations;
     }
   };
 
   member = {
     create: async (data: any) => {
-      console.log('Creating member with data:', data);
-      return { id: `MOCK-${Date.now()}`, ...data.data };
+      const { data: member, error } = await supabase
+        .from('members')
+        .insert([data.data])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return member;
     },
     findMany: async () => {
-      return mockMembers;
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('*');
+
+      if (error) throw error;
+      return members || mockMembers;
     }
   };
 
   payment = {
     create: async (data: any) => {
-      console.log('Creating payment with data:', data);
-      return { id: `MOCK-${Date.now()}`, ...data.data };
+      const { data: payment, error } = await supabase
+        .from('payments')
+        .insert([data.data])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return payment;
     },
     findMany: async () => {
-      return mockPayments;
+      const { data: payments, error } = await supabase
+        .from('payments')
+        .select('*');
+
+      if (error) throw error;
+      return payments || mockPayments;
     }
   };
 }
 
 const mockPrismaClient = new MockPrismaClient();
 export default mockPrismaClient;
-
