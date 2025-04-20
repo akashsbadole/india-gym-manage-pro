@@ -30,15 +30,16 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import mockPrisma from '@/lib/browser-prisma';
 import { showNotification } from '@/utils/notifications';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddMemberFormProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
-// Form validation schema aligned with Prisma Member model
+// Form validation schema aligned with Supabase Member model
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }).optional().or(z.literal('')),
@@ -53,6 +54,50 @@ const formSchema = z.object({
 });
 
 const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [locations, setLocations] = React.useState<any[]>([]);
+  const [memberships, setMemberships] = React.useState<any[]>([]);
+
+  // Fetch gym locations and memberships on component mount
+  React.useEffect(() => {
+    const fetchData = async () => {
+      // Fetch gym locations
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('gym_locations')
+        .select('id, name');
+      
+      if (locationsError) {
+        console.error('Error fetching gym locations:', locationsError);
+        toast({
+          title: 'Error fetching gym locations',
+          description: locationsError.message,
+          variant: 'destructive',
+        });
+      } else {
+        setLocations(locationsData || []);
+      }
+
+      // Fetch memberships
+      const { data: membershipsData, error: membershipsError } = await supabase
+        .from('memberships')
+        .select('id, name, price');
+      
+      if (membershipsError) {
+        console.error('Error fetching memberships:', membershipsError);
+        toast({
+          title: 'Error fetching memberships',
+          description: membershipsError.message,
+          variant: 'destructive',
+        });
+      } else {
+        setMemberships(membershipsData || []);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,35 +115,56 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log('Form submitted:', values);
+    setIsSubmitting(true);
     
     try {
-      // Parse the date of birth properly
-      const dateOfBirth = values.dateOfBirth ? new Date(values.dateOfBirth) : undefined;
+      // Get current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('You must be logged in to add a member');
+      }
       
-      // Create user in database
-      const member = await mockPrisma.member.create({
-        data: {
+      // Parse the date of birth properly
+      const dateOfBirth = values.dateOfBirth ? new Date(values.dateOfBirth).toISOString() : null;
+
+      // Create member in database
+      const { data: member, error } = await supabase
+        .from('members')
+        .insert({
           name: values.name,
           email: values.email || null,
           phone: values.phone,
           address: values.address || null,
-          dateOfBirth: dateOfBirth,
+          date_of_birth: dateOfBirth,
           gender: values.gender || null,
-          emergencyContact: values.emergencyContact || null,
+          emergency_contact: values.emergencyContact || null,
           active: values.active,
-          gymLocation: {
-            connect: { id: values.gymLocationId }
-          },
-          createdBy: {
-            // Assuming a default user for now, in a real app this would be the logged-in user
-            connect: { id: 'USR001' }
-          },
-          memberships: {
-            connect: { id: values.membershipId }
-          }
-        },
-      });
+          gym_location_id: values.gymLocationId,
+          created_by: session.user.id
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+
+      // Create membership enrollment
+      if (member) {
+        const { error: enrollmentError } = await supabase
+          .from('membership_enrollments')
+          .insert({
+            member_id: member.id,
+            membership_id: values.membershipId,
+            start_date: new Date().toISOString(),
+            end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
+            status: 'ACTIVE'
+          });
+        
+        if (enrollmentError) {
+          throw enrollmentError;
+        }
+      }
       
       showNotification(
         'Member added successfully!',
@@ -109,15 +175,17 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
       );
       
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating member:', error);
       showNotification(
         'Failed to add member',
         'error',
         {
-          description: 'There was an error saving the member data. Please try again.'
+          description: error.message || 'There was an error saving the member data. Please try again.'
         }
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -270,9 +338,15 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="loc1">Mumbai Central</SelectItem>
-                        <SelectItem value="loc2">Delhi Heights</SelectItem>
-                        <SelectItem value="loc3">Bangalore East</SelectItem>
+                        {locations.length > 0 ? (
+                          locations.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading" disabled>Loading locations...</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -296,9 +370,15 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="mem1">Basic - ₹1,999/month</SelectItem>
-                        <SelectItem value="mem2">Premium - ₹4,999/month</SelectItem>
-                        <SelectItem value="mem3">VIP - ₹9,999/month</SelectItem>
+                        {memberships.length > 0 ? (
+                          memberships.map((membership) => (
+                            <SelectItem key={membership.id} value={membership.id}>
+                              {membership.name} - ₹{membership.price}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="loading" disabled>Loading memberships...</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -329,10 +409,12 @@ const AddMemberForm: React.FC<AddMemberFormProps> = ({ onClose, onSuccess }) => 
             />
 
             <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={onClose} type="button">
                 Cancel
               </Button>
-              <Button type="submit">Add Member</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Adding...' : 'Add Member'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

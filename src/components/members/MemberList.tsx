@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -16,67 +16,30 @@ import {
   ChevronRight, 
   User,
   Phone,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import MemberDetails from './MemberDetails';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock data - would be replaced with actual API calls in a real app
-const MEMBERS_DATA = [
-  { 
-    id: '1', 
-    name: 'Rahul Sharma', 
-    phone: '+91 9876543210', 
-    email: 'rahul.s@example.com',
-    joinDate: new Date(2023, 3, 15),
-    active: true,
-    location: 'Mumbai Central',
-    membership: 'Premium'
-  },
-  { 
-    id: '2', 
-    name: 'Priya Patel', 
-    phone: '+91 8765432109', 
-    email: 'priya.p@example.com',
-    joinDate: new Date(2023, 5, 22),
-    active: true,
-    location: 'Delhi Heights',
-    membership: 'Basic'
-  },
-  { 
-    id: '3', 
-    name: 'Ankit Singh', 
-    phone: '+91 7654321098', 
-    email: 'ankit.s@example.com',
-    joinDate: new Date(2023, 2, 8),
-    active: false,
-    location: 'Mumbai Central',
-    membership: 'Premium'
-  },
-  { 
-    id: '4', 
-    name: 'Neha Kapoor', 
-    phone: '+91 6543210987', 
-    email: 'neha.k@example.com',
-    joinDate: new Date(2023, 7, 30),
-    active: true,
-    location: 'Bangalore East',
-    membership: 'VIP'
-  },
-  { 
-    id: '5', 
-    name: 'Vikram Joshi', 
-    phone: '+91 5432109876', 
-    email: 'vikram.j@example.com',
-    joinDate: new Date(2023, 1, 17),
-    active: true,
-    location: 'Delhi Heights',
-    membership: 'Basic'
-  },
-];
+interface MemberData {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  join_date: string;
+  active: boolean;
+  gym_location: {
+    name: string;
+  };
+  // For the membership info, we'll fetch this separately
+  membership?: string;
+}
 
 interface MemberListProps {
   searchQuery: string;
@@ -85,12 +48,78 @@ interface MemberListProps {
 const MemberList: React.FC<MemberListProps> = ({ searchQuery }) => {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState<MemberData[]>([]);
+  const { toast } = useToast();
   const itemsPerPage = 5;
 
-  const filteredMembers = MEMBERS_DATA.filter(member => 
+  // Fetch members from Supabase
+  useEffect(() => {
+    const fetchMembers = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select(`
+            id, 
+            name, 
+            phone, 
+            email, 
+            join_date, 
+            active,
+            gym_location:gym_location_id(name)
+          `)
+          .order('join_date', { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        // For each member, fetch their membership info
+        const membersWithMembership = await Promise.all(
+          (data || []).map(async (member) => {
+            const { data: enrollments, error: enrollmentError } = await supabase
+              .from('membership_enrollments')
+              .select(`
+                membership:membership_id(name)
+              `)
+              .eq('member_id', member.id)
+              .eq('status', 'ACTIVE')
+              .limit(1)
+              .single();
+
+            if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+              console.error('Error fetching membership:', enrollmentError);
+            }
+
+            return {
+              ...member,
+              membership: enrollments?.membership?.name || 'None'
+            };
+          })
+        );
+
+        setMembers(membersWithMembership);
+      } catch (error: any) {
+        console.error('Error fetching members:', error);
+        toast({
+          title: 'Error loading members',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, [toast]);
+
+  // Filter members based on search query
+  const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     member.phone.includes(searchQuery) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleViewMember = (memberId: string) => {
@@ -106,17 +135,64 @@ const MemberList: React.FC<MemberListProps> = ({ searchQuery }) => {
     // Implement edit functionality
   };
 
-  const handleDeleteMember = (memberId: string) => {
-    console.log('Delete member:', memberId);
-    // Implement delete functionality with confirmation
+  const handleDeleteMember = async (memberId: string) => {
+    if (window.confirm('Are you sure you want to delete this member? This action cannot be undone.')) {
+      try {
+        const { error } = await supabase
+          .from('members')
+          .delete()
+          .eq('id', memberId);
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Update the members list
+        setMembers(members.filter(member => member.id !== memberId));
+        toast({
+          title: 'Member deleted',
+          description: 'The member has been successfully deleted',
+        });
+      } catch (error: any) {
+        console.error('Error deleting member:', error);
+        toast({
+          title: 'Error deleting member',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   // If a member is selected, show their details
   if (selectedMember) {
-    const member = MEMBERS_DATA.find(m => m.id === selectedMember);
+    const member = members.find(m => m.id === selectedMember);
     if (member) {
-      return <MemberDetails member={member} onClose={handleCloseDetails} />;
+      return <MemberDetails 
+        member={{
+          id: member.id,
+          name: member.name,
+          phone: member.phone,
+          email: member.email || '',
+          joinDate: new Date(member.join_date),
+          active: member.active,
+          location: member.gym_location.name,
+          membership: member.membership || 'None'
+        }} 
+        onClose={handleCloseDetails} 
+      />;
     }
+  }
+
+  if (loading) {
+    return (
+      <Card className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center space-y-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading members...</p>
+        </div>
+      </Card>
+    );
   }
 
   return (
@@ -146,7 +222,7 @@ const MemberList: React.FC<MemberListProps> = ({ searchQuery }) => {
                         </div>
                         <div>
                           <div className="font-medium">{member.name}</div>
-                          <div className="text-xs text-muted-foreground">{member.location}</div>
+                          <div className="text-xs text-muted-foreground">{member.gym_location.name}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -170,7 +246,7 @@ const MemberList: React.FC<MemberListProps> = ({ searchQuery }) => {
                     <TableCell>
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{formatDistanceToNow(member.joinDate, { addSuffix: true })}</span>
+                        <span className="text-sm">{formatDistanceToNow(new Date(member.join_date), { addSuffix: true })}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -206,7 +282,7 @@ const MemberList: React.FC<MemberListProps> = ({ searchQuery }) => {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  No members found.
+                  {searchQuery ? 'No members found matching your search.' : 'No members found. Add your first member!'}
                 </TableCell>
               </TableRow>
             )}

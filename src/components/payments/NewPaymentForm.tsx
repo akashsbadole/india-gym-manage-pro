@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -13,13 +14,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, DollarSignIcon } from 'lucide-react';
+import { CalendarIcon, DollarSignIcon, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { showNotification } from '@/utils/notifications';
-import mockPrisma from '@/lib/browser-prisma';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Form props interface
 interface NewPaymentFormProps {
@@ -27,7 +29,7 @@ interface NewPaymentFormProps {
   onCancel: () => void;
 }
 
-// Form validation schema based on the Prisma Payment model
+// Form validation schema based on the Supabase Payment model
 const formSchema = z.object({
   memberId: z.string().min(1, { message: 'Please select a member.' }),
   amount: z.coerce.number().positive({ message: 'Amount must be greater than zero.' }),
@@ -35,18 +37,57 @@ const formSchema = z.object({
   paymentMethod: z.enum(['CASH', 'UPI', 'BANK_TRANSFER', 'CARD', 'CHEQUE', 'OTHER']),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  gymLocationId: z.string().min(1, { message: 'Please select a gym location.' }),
 });
 
-// Sample member data - would come from API in a real app
-const members = [
-  { id: 'MEM001', name: 'Rahul Kumar' },
-  { id: 'MEM002', name: 'Priya Singh' },
-  { id: 'MEM003', name: 'Amit Patel' },
-  { id: 'MEM004', name: 'Neha Sharma' },
-  { id: 'MEM005', name: 'Vikram Joshi' },
-];
-
 export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch members
+        const { data: membersData, error: membersError } = await supabase
+          .from('members')
+          .select('id, name')
+          .eq('active', true);
+        
+        if (membersError) {
+          throw membersError;
+        }
+        
+        setMembers(membersData || []);
+        
+        // Fetch gym locations
+        const { data: locationsData, error: locationsError } = await supabase
+          .from('gym_locations')
+          .select('id, name');
+        
+        if (locationsError) {
+          throw locationsError;
+        }
+        
+        setLocations(locationsData || []);
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: 'Error loading data',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [toast]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -56,32 +97,33 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
       paymentMethod: 'CASH',
       reference: '',
       notes: '',
+      gymLocationId: '',
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    console.log('Payment submitted:', values);
+    setIsSubmitting(true);
     
     try {
       // Create payment in database
-      const payment = await mockPrisma.payment.create({
-        data: {
+      const { data, error } = await supabase
+        .from('payments')
+        .insert({
           amount: values.amount,
-          paymentDate: values.paymentDate,
-          paymentMethod: values.paymentMethod,
+          payment_date: values.paymentDate.toISOString(),
+          payment_method: values.paymentMethod,
           status: 'COMPLETED',
           reference: values.reference || null,
           notes: values.notes || null,
-          member: {
-            connect: { id: values.memberId }
-          },
-          gymLocation: {
-            // For simplicity, we're connecting to the first gym location
-            // In a real app, this would be based on context or selection
-            connect: { id: 'loc1' }
-          }
-        },
-      });
+          member_id: values.memberId,
+          gym_location_id: values.gymLocationId
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
       
       const memberName = members.find(m => m.id === values.memberId)?.name || 'Member';
       
@@ -95,17 +137,30 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
       );
       
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing payment:', error);
       showNotification(
         'Failed to process payment', 
         'error',
         {
-          description: 'There was an error saving the payment. Please try again.',
+          description: error.message || 'There was an error saving the payment. Please try again.',
         }
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center space-y-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -128,7 +183,35 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
                 <SelectContent>
                   {members.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.name} ({member.id})
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="gymLocationId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gym Location</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a location" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -265,8 +348,15 @@ export default function NewPaymentForm({ onSuccess, onCancel }: NewPaymentFormPr
           <Button variant="outline" type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
-            Process Payment
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Process Payment'
+            )}
           </Button>
         </div>
       </form>
